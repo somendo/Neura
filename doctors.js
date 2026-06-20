@@ -1,0 +1,11 @@
+const {json,getSupabase,getUser,requireActive,isAdmin,specialty}=require('./_lib');
+function dist(a,b,c,d){const R=6371,rad=x=>x*Math.PI/180;const s=Math.sin(rad(c-a)/2)**2+Math.cos(rad(a))*Math.cos(rad(c))*Math.sin(rad(d-b)/2)**2;return +(R*2*Math.atan2(Math.sqrt(s),Math.sqrt(1-s))).toFixed(2)}
+module.exports=async(req,res)=>{try{const sb=getSupabase();const {user,profile}=await getUser(req);requireActive(profile);const {action}=req.body||{};
+ if(action==='search'){
+  const spec=req.body.specialty||specialty(req.body.symptoms||'');const city=req.body.city||'Dhaka';const {data:dir}=await sb.from('doctor_directory').select('*').or(`specialty.ilike.%${spec.split(' ')[0]}%,city.ilike.%${city}%`).limit(10);
+  let osm=[];const lat=parseFloat(req.body.lat),lon=parseFloat(req.body.lon);if(Number.isFinite(lat)&&Number.isFinite(lon)){try{const q=`[out:json][timeout:7];(node[amenity=hospital](around:7000,${lat},${lon});node[amenity=clinic](around:6000,${lat},${lon});node[healthcare](around:6000,${lat},${lon}););out center tags 15;`;const r=await fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:'data='+encodeURIComponent(q)});const data=await r.json();osm=(data.elements||[]).map(e=>{const la=e.lat||e.center?.lat,lo=e.lon||e.center?.lon,t=e.tags||{};return {name:t.name||'Medical facility',specialty:spec,clinic:t.healthcare||t.amenity||'healthcare',address:[t['addr:street'],t['addr:city']].filter(Boolean).join(', ')||'Address unavailable',phone:t.phone||t['contact:phone']||'Phone unavailable',distanceKm:la&&lo?dist(lat,lon,la,lo):null,source_url:'OpenStreetMap',verified:false}}).slice(0,8)}catch(e){}}
+  return json(res,200,{ok:true,specialty:spec,results:[...(dir||[]),...osm]});
+ }
+ if(action==='admin_add'){if(!isAdmin(profile))return json(res,403,{error:'Admin only'});const fields=['name','specialty','clinic','city','area','phone','address','source_url','verified'];const row={};for(const f of fields)row[f]=req.body[f];const {data,error}=await sb.from('doctor_directory').insert(row).select('*').single();if(error)return json(res,400,{error:error.message});return json(res,200,{ok:true,doctor:data});}
+ return json(res,400,{error:'Unknown action'});
+}catch(e){json(res,500,{error:e.message})}}
