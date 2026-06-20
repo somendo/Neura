@@ -1,0 +1,18 @@
+{
+  "name": "neura-healthcare-company-mvp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Neura real healthcare companion MVP: PWA, Supabase auth/database, Gemini AI, admin approval, manual subscriptions, medication reminders, web push.",
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev",
+    "vapid": "node scripts/generate-vapid.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
+    "web-push": "^3.6.7"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
