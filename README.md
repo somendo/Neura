@@ -1,2 +1,0 @@
-# Neura
-Neura healthcare mvp
